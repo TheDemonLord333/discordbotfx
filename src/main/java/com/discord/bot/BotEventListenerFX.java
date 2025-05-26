@@ -1,6 +1,5 @@
 package com.discord.bot;
 
-import com.discord.bot.DiscordBotFX;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -23,14 +22,27 @@ class BotEventListenerFX extends ListenerAdapter {
 
         String message = event.getMessage().getContentRaw();
         String author = event.getAuthor().getName();
-        String channel = event.getChannel().getName();
 
-        gui.log("Message in #" + channel + " by " + author + ": " + message);
-        gui.addMessageToHistory(channel, author, message);
+        // Check if it's a DM or guild message
+        if (event.isFromGuild()) {
+            // Guild message
+            String channel = event.getChannel().getName();
+            gui.log("Message in #" + channel + " by " + author + ": " + message);
+            gui.addMessageToHistory(channel, author, message);
+        } else {
+            // Direct message
+            gui.logDm("DM received from " + author + "#" + event.getAuthor().getDiscriminator() + ": " + message);
+            gui.addDmToHistory(author, "Received", message);
+        }
 
         // Simple auto-responses
         if (message.equals("!ping")) {
             event.getChannel().sendMessage("Pong! (from JavaFX)").queue();
+        }
+
+        // DM-specific auto-responses
+        if (!event.isFromGuild() && message.toLowerCase().contains("help")) {
+            event.getChannel().sendMessage("Hello! I'm a Discord bot controlled via JavaFX. Type '!ping' to test me!").queue();
         }
     }
 }

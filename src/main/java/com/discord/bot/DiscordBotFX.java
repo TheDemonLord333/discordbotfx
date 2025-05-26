@@ -1,4 +1,5 @@
-package com.discord.bot;// Main JavaFX Application
+package com.discord.bot;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -10,21 +11,17 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-
 import javafx.util.Duration;
+
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.api.events.session.ReadyEvent;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 
 import java.time.LocalDateTime;
@@ -44,6 +41,7 @@ public class DiscordBotFX extends Application {
     private ComboBox<String> activityTypeBox;
     private TextArea logArea;
     private TextArea controlsLogArea; // Separate log area for Controls tab
+    private TextArea dmLogArea; // Separate log area for DM tab
     private Button connectButton;
     private Button disconnectButton;
     private Button sendMessageButton;
@@ -52,6 +50,13 @@ public class DiscordBotFX extends Application {
     private Label uptimeLabel;
     private Label guildCountLabel;
     private Label userCountLabel;
+
+    // Direct Messages Components
+    private TextField dmUserIdField;
+    private TextField dmMessageField;
+    private Button sendDmButton;
+    private TableView<MessageEntry> dmHistoryTable;
+    private ObservableList<MessageEntry> dmHistory;
 
     // Message History
     private TableView<MessageEntry> messageTable;
@@ -66,10 +71,10 @@ public class DiscordBotFX extends Application {
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
         primaryStage.setTitle("Discord Bot Controller - JavaFX");
-        primaryStage.setMinWidth(900);
-        primaryStage.setMinHeight(700);
+        primaryStage.setMinWidth(1000);
+        primaryStage.setMinHeight(750);
 
-        Scene scene = new Scene(createMainLayout(), 900, 700);
+        Scene scene = new Scene(createMainLayout(), 1000, 750);
 
         // Load Discord theme CSS
         try {
@@ -108,14 +113,18 @@ public class DiscordBotFX extends Application {
         controlsTab.setContent(createControlsPane());
 
         // Message History Tab
-        Tab historyTab = new Tab("Message History");
+        Tab historyTab = new Tab("Messages");
         historyTab.setContent(createMessageHistoryPane());
+
+        // Direct Messages Tab
+        Tab dmTab = new Tab("Direct Messages");
+        dmTab.setContent(createDirectMessagesPane());
 
         // Statistics Tab
         Tab statsTab = new Tab("Statistics");
         statsTab.setContent(createStatisticsPane());
 
-        tabPane.getTabs().addAll(connectionTab, controlsTab, historyTab, statsTab);
+        tabPane.getTabs().addAll(connectionTab, controlsTab, historyTab, dmTab, statsTab);
 
         root.setCenter(tabPane);
         root.setBottom(createStatusBar());
@@ -129,7 +138,6 @@ public class DiscordBotFX extends Application {
 
         // Title
         Label titleLabel = new Label("Bot Connection");
-        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         titleLabel.getStyleClass().add("title-label");
 
         // Token input
@@ -164,11 +172,9 @@ public class DiscordBotFX extends Application {
         // Connection status
         connectionStatus = new Label("Status: Disconnected");
         connectionStatus.getStyleClass().add("status-disconnected");
-        connectionStatus.setFont(Font.font("Arial", FontWeight.BOLD, 14));
 
         // Log area
         Label logLabel = new Label("Connection Log:");
-        logLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         logLabel.getStyleClass().add("section-label");
 
         logArea = new TextArea();
@@ -197,7 +203,6 @@ public class DiscordBotFX extends Application {
 
         // Title
         Label titleLabel = new Label("Bot Controls");
-        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         titleLabel.getStyleClass().add("title-label");
 
         // Message sending section
@@ -231,7 +236,6 @@ public class DiscordBotFX extends Application {
         VBox messageSection = new VBox(10);
 
         Label sectionLabel = new Label("Send Message");
-        sectionLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         sectionLabel.getStyleClass().add("section-label");
 
         // Channel ID input
@@ -273,7 +277,6 @@ public class DiscordBotFX extends Application {
         VBox statusSection = new VBox(10);
 
         Label sectionLabel = new Label("Bot Status");
-        sectionLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         sectionLabel.getStyleClass().add("section-label");
 
         HBox statusBox = new HBox(10);
@@ -309,7 +312,6 @@ public class DiscordBotFX extends Application {
         VBox quickSection = new VBox(10);
 
         Label sectionLabel = new Label("Quick Actions");
-        sectionLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         sectionLabel.getStyleClass().add("section-label");
 
         HBox buttonsBox = new HBox(10);
@@ -345,7 +347,6 @@ public class DiscordBotFX extends Application {
         VBox logSection = new VBox(10);
 
         Label sectionLabel = new Label("Bot Activity Log");
-        sectionLabel.setFont(Font.font("Arial", FontWeight.BOLD, 14));
         sectionLabel.getStyleClass().add("section-label");
 
         controlsLogArea = new TextArea();
@@ -376,15 +377,184 @@ public class DiscordBotFX extends Application {
         return logSection;
     }
 
+    private VBox createDirectMessagesPane() {
+        VBox dmPane = new VBox(15);
+        dmPane.setPadding(new Insets(20));
+
+        // Initialize DM history
+        dmHistory = FXCollections.observableArrayList();
+
+        // Title
+        Label titleLabel = new Label("Direct Messages");
+        titleLabel.getStyleClass().add("title-label");
+
+        // DM Sending Section
+        VBox dmSendSection = createDmSendSection();
+
+        // DM History Section
+        VBox dmHistorySection = createDmHistorySection();
+
+        // DM Log Section
+        VBox dmLogSection = createDmLogSection();
+
+        dmPane.getChildren().addAll(
+                titleLabel,
+                new Separator(),
+                dmSendSection,
+                new Separator(),
+                dmHistorySection,
+                new Separator(),
+                dmLogSection
+        );
+
+        return dmPane;
+    }
+
+    private VBox createDmSendSection() {
+        VBox dmSendSection = new VBox(10);
+
+        Label sectionLabel = new Label("Send Direct Message");
+        sectionLabel.getStyleClass().add("section-label");
+
+        // User ID input
+        HBox userIdBox = new HBox(10);
+        userIdBox.setAlignment(Pos.CENTER_LEFT);
+        Label userIdLabel = new Label("User ID:");
+        userIdLabel.setPrefWidth(100);
+        userIdLabel.getStyleClass().add("subsection-label");
+        dmUserIdField = new TextField();
+        dmUserIdField.setPromptText("Enter Discord User ID...");
+        dmUserIdField.setPrefWidth(200);
+
+        userIdBox.getChildren().addAll(userIdLabel, dmUserIdField);
+
+        // Message input
+        HBox dmMessageBox = new HBox(10);
+        dmMessageBox.setAlignment(Pos.CENTER_LEFT);
+        Label dmMessageLabel = new Label("Message:");
+        dmMessageLabel.setPrefWidth(100);
+        dmMessageLabel.getStyleClass().add("subsection-label");
+        dmMessageField = new TextField();
+        dmMessageField.setPromptText("Enter DM message...");
+        dmMessageField.setPrefWidth(300);
+        dmMessageField.setOnAction(e -> sendDirectMessage());
+
+        sendDmButton = new Button("Send DM");
+        sendDmButton.setPrefWidth(100);
+        sendDmButton.getStyleClass().add("send-button");
+        sendDmButton.setDisable(true);
+        sendDmButton.setOnAction(e -> sendDirectMessage());
+
+        dmMessageBox.getChildren().addAll(dmMessageLabel, dmMessageField, sendDmButton);
+
+        // Quick DM Actions
+        HBox quickDmActions = new HBox(10);
+        quickDmActions.setAlignment(Pos.CENTER_LEFT);
+
+        Button getDmChannelsButton = new Button("Show DM Channels");
+        getDmChannelsButton.getStyleClass().add("button-secondary");
+        getDmChannelsButton.setOnAction(e -> showDmChannels());
+
+        Button getUserInfoButton = new Button("Get User Info");
+        getUserInfoButton.getStyleClass().add("button-secondary");
+        getUserInfoButton.setOnAction(e -> getUserInfo());
+
+        quickDmActions.getChildren().addAll(getDmChannelsButton, getUserInfoButton);
+
+        dmSendSection.getChildren().addAll(sectionLabel, userIdBox, dmMessageBox, quickDmActions);
+        return dmSendSection;
+    }
+
+    private VBox createDmHistorySection() {
+        VBox dmHistorySection = new VBox(10);
+
+        Label sectionLabel = new Label("DM History");
+        sectionLabel.getStyleClass().add("section-label");
+
+        // Create DM history table
+        dmHistoryTable = new TableView<>(dmHistory);
+        dmHistoryTable.setPrefHeight(200);
+
+        TableColumn<MessageEntry, String> dmTimeColumn = new TableColumn<>("Time");
+        dmTimeColumn.setCellValueFactory(new PropertyValueFactory<>("time"));
+        dmTimeColumn.setPrefWidth(100);
+
+        TableColumn<MessageEntry, String> dmUserColumn = new TableColumn<>("User");
+        dmUserColumn.setCellValueFactory(new PropertyValueFactory<>("author"));
+        dmUserColumn.setPrefWidth(150);
+
+        TableColumn<MessageEntry, String> dmDirectionColumn = new TableColumn<>("Direction");
+        dmDirectionColumn.setCellValueFactory(new PropertyValueFactory<>("channel"));
+        dmDirectionColumn.setPrefWidth(80);
+
+        TableColumn<MessageEntry, String> dmMessageColumn = new TableColumn<>("Message");
+        dmMessageColumn.setCellValueFactory(new PropertyValueFactory<>("message"));
+        dmMessageColumn.setPrefWidth(350);
+
+        dmHistoryTable.getColumns().addAll(dmTimeColumn, dmUserColumn, dmDirectionColumn, dmMessageColumn);
+
+        // DM History controls
+        HBox dmHistoryControls = new HBox(10);
+        dmHistoryControls.setAlignment(Pos.CENTER_LEFT);
+
+        Button clearDmHistoryButton = new Button("Clear DM History");
+        clearDmHistoryButton.getStyleClass().add("button-secondary");
+        clearDmHistoryButton.setOnAction(e -> dmHistory.clear());
+
+        Button exportDmHistoryButton = new Button("Export DM History");
+        exportDmHistoryButton.getStyleClass().add("button-secondary");
+        exportDmHistoryButton.setOnAction(e -> exportDmHistory());
+
+        dmHistoryControls.getChildren().addAll(clearDmHistoryButton, exportDmHistoryButton);
+
+        dmHistorySection.getChildren().addAll(sectionLabel, dmHistoryTable, dmHistoryControls);
+        VBox.setVgrow(dmHistoryTable, Priority.ALWAYS);
+
+        return dmHistorySection;
+    }
+
+    private VBox createDmLogSection() {
+        VBox dmLogSection = new VBox(10);
+
+        Label sectionLabel = new Label("DM Activity Log");
+        sectionLabel.getStyleClass().add("section-label");
+
+        dmLogArea = new TextArea();
+        dmLogArea.setPrefHeight(150);
+        dmLogArea.setEditable(false);
+        dmLogArea.getStyleClass().add("log-area");
+        dmLogArea.setWrapText(true);
+
+        // DM Log controls
+        HBox dmLogControls = new HBox(10);
+        dmLogControls.setAlignment(Pos.CENTER_LEFT);
+
+        Button clearDmLogButton = new Button("Clear DM Log");
+        clearDmLogButton.getStyleClass().add("button-secondary");
+        clearDmLogButton.setOnAction(e -> dmLogArea.clear());
+
+        Button scrollDmLogButton = new Button("Scroll to Bottom");
+        scrollDmLogButton.getStyleClass().add("button-secondary");
+        scrollDmLogButton.setOnAction(e -> {
+            dmLogArea.setScrollTop(Double.MAX_VALUE);
+            dmLogArea.positionCaret(dmLogArea.getLength());
+        });
+
+        dmLogControls.getChildren().addAll(clearDmLogButton, scrollDmLogButton);
+
+        dmLogSection.getChildren().addAll(sectionLabel, dmLogArea, dmLogControls);
+
+        return dmLogSection;
+    }
+
     private VBox createMessageHistoryPane() {
         VBox historyPane = new VBox(10);
         historyPane.setPadding(new Insets(20));
 
         Label titleLabel = new Label("Message History");
-        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         titleLabel.getStyleClass().add("title-label");
 
-        // Create table
+        // Initialize message history
         messageHistory = FXCollections.observableArrayList();
         messageTable = new TableView<>(messageHistory);
 
@@ -421,7 +591,6 @@ public class DiscordBotFX extends Application {
         statsPane.setPadding(new Insets(20));
 
         Label titleLabel = new Label("Bot Statistics");
-        titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         titleLabel.getStyleClass().add("title-label");
 
         GridPane statsGrid = new GridPane();
@@ -435,7 +604,6 @@ public class DiscordBotFX extends Application {
         statsGrid.add(uptimeKeyLabel, 0, 0);
         uptimeLabel = new Label("00:00:00");
         uptimeLabel.getStyleClass().add("stats-value");
-        uptimeLabel.setFont(Font.font("Courier New", 14));
         statsGrid.add(uptimeLabel, 1, 0);
 
         // Guild count
@@ -444,7 +612,6 @@ public class DiscordBotFX extends Application {
         statsGrid.add(guildKeyLabel, 0, 1);
         guildCountLabel = new Label("0");
         guildCountLabel.getStyleClass().add("stats-value");
-        guildCountLabel.setFont(Font.font("Courier New", 14));
         statsGrid.add(guildCountLabel, 1, 1);
 
         // User count
@@ -453,7 +620,6 @@ public class DiscordBotFX extends Application {
         statsGrid.add(userKeyLabel, 0, 2);
         userCountLabel = new Label("0");
         userCountLabel.getStyleClass().add("stats-value");
-        userCountLabel.setFont(Font.font("Courier New", 14));
         statsGrid.add(userCountLabel, 1, 2);
 
         // Messages sent
@@ -462,7 +628,6 @@ public class DiscordBotFX extends Application {
         statsGrid.add(sentKeyLabel, 0, 3);
         Label messagesSentLabel = new Label("0");
         messagesSentLabel.getStyleClass().add("stats-value");
-        messagesSentLabel.setFont(Font.font("Courier New", 14));
         statsGrid.add(messagesSentLabel, 1, 3);
 
         // Messages received
@@ -471,7 +636,6 @@ public class DiscordBotFX extends Application {
         statsGrid.add(receivedKeyLabel, 0, 4);
         Label messagesReceivedLabel = new Label("0");
         messagesReceivedLabel.getStyleClass().add("stats-value");
-        messagesReceivedLabel.setFont(Font.font("Courier New", 14));
         statsGrid.add(messagesReceivedLabel, 1, 4);
 
         statsPane.getChildren().addAll(titleLabel, new Separator(), statsGrid);
@@ -511,7 +675,7 @@ public class DiscordBotFX extends Application {
 
                 jda = JDABuilder.createDefault(token)
                         .setActivity(Activity.playing("JavaFX Controller"))
-                        .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES)
+                        .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES, GatewayIntent.DIRECT_MESSAGES)
                         .addEventListeners(new BotEventListenerFX(DiscordBotFX.this))
                         .build();
 
@@ -559,6 +723,7 @@ public class DiscordBotFX extends Application {
         disconnectButton.setDisable(false);
         sendMessageButton.setDisable(false);
         setStatusButton.setDisable(false);
+        sendDmButton.setDisable(false);
     }
 
     private void onBotDisconnected() {
@@ -569,6 +734,7 @@ public class DiscordBotFX extends Application {
         disconnectButton.setDisable(true);
         sendMessageButton.setDisable(true);
         setStatusButton.setDisable(true);
+        sendDmButton.setDisable(true);
     }
 
     private void sendMessage() {
@@ -598,6 +764,36 @@ public class DiscordBotFX extends Application {
             }
         } catch (Exception e) {
             log("Error sending message: " + e.getMessage());
+        }
+    }
+
+    private void sendDirectMessage() {
+        if (jda == null) return;
+
+        String userId = dmUserIdField.getText().trim();
+        String message = dmMessageField.getText().trim();
+
+        if (userId.isEmpty() || message.isEmpty()) {
+            showAlert("Error", "Please enter User ID and message!", Alert.AlertType.ERROR);
+            return;
+        }
+
+        try {
+            jda.retrieveUserById(userId).queue(user -> {
+                user.openPrivateChannel().queue(privateChannel -> {
+                    privateChannel.sendMessage(message).queue(
+                            success -> Platform.runLater(() -> {
+                                logDm("DM sent to " + user.getName() + "#" + user.getDiscriminator() + ": " + message);
+                                addDmToHistory(user.getName(), "Sent", message);
+                                dmMessageField.clear();
+                                messagesSent++;
+                            }),
+                            error -> Platform.runLater(() -> logDm("Failed to send DM to " + user.getName() + ": " + error.getMessage()))
+                    );
+                }, error -> Platform.runLater(() -> logDm("Failed to open DM channel with user " + userId + ": " + error.getMessage())));
+            }, error -> Platform.runLater(() -> logDm("Failed to retrieve user " + userId + ": " + error.getMessage())));
+        } catch (Exception e) {
+            logDm("Error sending DM: " + e.getMessage());
         }
     }
 
@@ -670,6 +866,51 @@ public class DiscordBotFX extends Application {
         log("Bot Ping: " + ping + "ms");
     }
 
+    private void showDmChannels() {
+        if (jda == null) return;
+
+        StringBuilder dmChannels = new StringBuilder("Open DM Channels:\n");
+        jda.getPrivateChannels().forEach(channel -> {
+            var user = channel.getUser();
+            if (user != null) {
+                dmChannels.append("- ").append(user.getName())
+                        .append("#").append(user.getDiscriminator())
+                        .append(" (ID: ").append(user.getId()).append(")\n");
+            }
+        });
+
+        if (dmChannels.toString().equals("Open DM Channels:\n")) {
+            dmChannels.append("No open DM channels found.\n");
+        }
+
+        logDm(dmChannels.toString());
+    }
+
+    private void getUserInfo() {
+        if (jda == null) return;
+
+        String userId = dmUserIdField.getText().trim();
+        if (userId.isEmpty()) {
+            showAlert("Error", "Please enter a User ID!", Alert.AlertType.ERROR);
+            return;
+        }
+
+        try {
+            jda.retrieveUserById(userId).queue(user -> {
+                StringBuilder userInfo = new StringBuilder("User Information:\n");
+                userInfo.append("Name: ").append(user.getName()).append("#").append(user.getDiscriminator()).append("\n");
+                userInfo.append("ID: ").append(user.getId()).append("\n");
+                userInfo.append("Bot: ").append(user.isBot() ? "Yes" : "No").append("\n");
+                userInfo.append("Avatar URL: ").append(user.getAvatarUrl()).append("\n");
+                userInfo.append("Account Created: ").append(user.getTimeCreated().toLocalDate()).append("\n");
+
+                Platform.runLater(() -> logDm(userInfo.toString()));
+            }, error -> Platform.runLater(() -> logDm("Failed to get user info for ID " + userId + ": " + error.getMessage())));
+        } catch (Exception e) {
+            logDm("Error getting user info: " + e.getMessage());
+        }
+    }
+
     private void openEmbedBuilder() {
         // Simple embed builder dialog
         Dialog<ButtonType> dialog = new Dialog<>();
@@ -720,6 +961,36 @@ public class DiscordBotFX extends Application {
         });
     }
 
+    private void exportDmHistory() {
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("Save DM History");
+        fileChooser.getExtensionFilters().add(
+                new javafx.stage.FileChooser.ExtensionFilter("CSV Files", "*.csv")
+        );
+
+        java.io.File file = fileChooser.showSaveDialog(primaryStage);
+        if (file != null) {
+            try (java.io.PrintWriter writer = new java.io.PrintWriter(file)) {
+                writer.println("Time,User,Direction,Message");
+                dmHistory.forEach(dm -> {
+                    writer.println(String.format("\"%s\",\"%s\",\"%s\",\"%s\"",
+                            dm.getTime(), dm.getAuthor(), dm.getChannel(),
+                            dm.getMessage().replace("\"", "\"\"")));
+                });
+
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Export Complete");
+                alert.setContentText("DM history exported successfully!");
+                alert.showAndWait();
+            } catch (java.io.IOException e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Export Error");
+                alert.setContentText("Failed to export DM history: " + e.getMessage());
+                alert.showAndWait();
+            }
+        }
+    }
+
     private void updateStats() {
         if (jda != null) {
             Platform.runLater(() -> {
@@ -765,10 +1036,29 @@ public class DiscordBotFX extends Application {
         });
     }
 
+    public void logDm(String message) {
+        Platform.runLater(() -> {
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+            String logEntry = "[" + timestamp + "] " + message + "\n";
+
+            // Add to DM log area
+            if (dmLogArea != null) {
+                dmLogArea.appendText(logEntry);
+                dmLogArea.setScrollTop(Double.MAX_VALUE);
+            }
+
+            // Also add to main log
+            log("DM: " + message);
+        });
+    }
+
     private void clearLogs() {
         logArea.clear();
         if (controlsLogArea != null) {
             controlsLogArea.clear();
+        }
+        if (dmLogArea != null) {
+            dmLogArea.clear();
         }
     }
 
@@ -782,6 +1072,18 @@ public class DiscordBotFX extends Application {
                     channel, author, message
             ));
             messagesReceived++;
+        });
+    }
+
+    public void addDmToHistory(String user, String direction, String message) {
+        Platform.runLater(() -> {
+            if (dmHistory.size() >= 1000) {
+                dmHistory.remove(0);
+            }
+            dmHistory.add(new MessageEntry(
+                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+                    direction, user, message
+            ));
         });
     }
 

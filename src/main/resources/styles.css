@@ -1,4 +1,4 @@
-/* styles.css - Discord Dark Theme */
+/* styles.css - Discord Dark Theme - FIXED VERSION */
 
 /* Root styling - Discord Dark Theme */
 .root {
@@ -10,8 +10,8 @@
 
 /* Tab Pane Styling - Discord Style */
 .tab-pane {
-    -fx-tab-min-width: 120px;
-    -fx-tab-max-width: 120px;
+    -fx-tab-min-width: 100px;
+    -fx-tab-max-width: 140px;
     -fx-background-color: #2f3136;
 }
 
@@ -73,10 +73,12 @@
     -fx-cursor: hand;
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
     -fx-text-fill: #ffffff;
+    -fx-background-color: #4f545c;
 }
 
 .button:hover {
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 4, 0, 0, 2);
+    -fx-background-color: #5d6269;
 }
 
 .button:pressed {
@@ -136,7 +138,7 @@
 }
 
 /* Text Field Styling - Discord Style */
-.text-field, .password-field, .text-area {
+.text-field, .password-field {
     -fx-background-color: #40444b;
     -fx-text-fill: #dcddde;
     -fx-border-color: #202225;
@@ -147,12 +149,31 @@
     -fx-font-size: 14px;
 }
 
-.text-field:focused, .password-field:focused, .text-area:focused {
+.text-field:focused, .password-field:focused {
     -fx-border-color: #5865f2;
     -fx-border-width: 1px;
     -fx-effect: dropshadow(three-pass-box, rgba(88,101,242,0.3), 3, 0, 0, 0);
 }
 
+/* TextArea - SPECIAL STYLING FOR LOG AREAS */
+.text-area {
+    -fx-background-color: #40444b;
+    -fx-text-fill: #dcddde;
+    -fx-border-color: #202225;
+    -fx-border-width: 1px;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+    -fx-padding: 10px;
+    -fx-font-size: 14px;
+}
+
+.text-area:focused {
+    -fx-border-color: #5865f2;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, rgba(88,101,242,0.3), 3, 0, 0, 0);
+}
+
+/* Fix for Text Content */
 .text-field .text, .password-field .text, .text-area .text {
     -fx-fill: #dcddde;
 }
@@ -160,6 +181,32 @@
 /* Prompt text */
 .text-field .prompt-text, .password-field .prompt-text, .text-area .prompt-text {
     -fx-fill: #72767d;
+}
+
+/* Log Area Styling - FIXED VERSION */
+.log-area {
+    -fx-background-color: #2f3136 !important;
+    -fx-text-fill: #b5f7a3 !important;
+    -fx-font-family: "Consolas", "Monaco", "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", monospace;
+    -fx-font-size: 12px;
+    -fx-border-color: #202225;
+    -fx-border-width: 1px;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+    -fx-padding: 8px;
+}
+
+.log-area .content {
+    -fx-background-color: #2f3136 !important;
+}
+
+.log-area .viewport {
+    -fx-background-color: #2f3136 !important;
+}
+
+.log-area .scroll-pane {
+    -fx-background-color: #2f3136 !important;
+    -fx-border-color: transparent;
 }
 
 /* ComboBox Styling - Discord Style */
@@ -196,28 +243,6 @@
 
 .combo-box .arrow-button .arrow {
     -fx-background-color: #dcddde;
-}
-
-/* Log Area Styling - Discord Code Block Style */
-.log-area {
-    -fx-background-color: #2f3136;
-    -fx-text-fill: #b5f7a3;
-    -fx-font-family: "Consolas", "Monaco", "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", monospace;
-    -fx-font-size: 12px;
-    -fx-border-color: #202225;
-    -fx-border-width: 1px;
-    -fx-border-radius: 3px;
-    -fx-background-radius: 3px;
-    -fx-padding: 8px;
-}
-
-.log-area .scroll-pane {
-    -fx-background-color: #2f3136;
-    -fx-border-color: transparent;
-}
-
-.log-area .viewport {
-    -fx-background-color: #2f3136;
 }
 
 /* Table View Styling - Discord Style */
@@ -273,37 +298,41 @@
     -fx-border-color: transparent;
 }
 
-/* Label Styling - Discord Typography */
+/* Label Styling - Discord Typography - FIXED */
+.label {
+    -fx-text-fill: #dcddde;
+}
+
 .title-label {
     -fx-font-size: 20px;
     -fx-font-weight: 600;
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: #ffffff !important;
 }
 
 .section-label {
     -fx-font-size: 16px;
     -fx-font-weight: 600;
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: #ffffff !important;
 }
 
 .subsection-label {
     -fx-font-size: 14px;
     -fx-font-weight: 500;
-    -fx-text-fill: #b9bbbe;
+    -fx-text-fill: #b9bbbe !important;
 }
 
 .status-connected {
-    -fx-text-fill: #57f287;
+    -fx-text-fill: #57f287 !important;
     -fx-font-weight: 600;
 }
 
 .status-disconnected {
-    -fx-text-fill: #ed4245;
+    -fx-text-fill: #ed4245 !important;
     -fx-font-weight: 600;
 }
 
 .status-connecting {
-    -fx-text-fill: #faa61a;
+    -fx-text-fill: #faa61a !important;
     -fx-font-weight: 600;
 }
 
@@ -318,12 +347,12 @@
 }
 
 .stats-label {
-    -fx-text-fill: #b9bbbe;
+    -fx-text-fill: #b9bbbe !important;
     -fx-font-weight: 500;
 }
 
 .stats-value {
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: #ffffff !important;
     -fx-font-weight: 600;
     -fx-font-family: "Consolas", "Monaco", monospace;
 }
