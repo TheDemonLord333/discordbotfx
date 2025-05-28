@@ -18,6 +18,7 @@ import javafx.util.Duration;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -39,6 +40,8 @@ public class DiscordBotFX extends Application {
     private TextField channelIdField;
     private TextField statusField;
     private ComboBox<String> activityTypeBox;
+    private ComboBox<String> onlineStatusBox; // NEU: Anwesenheitsstatus ComboBox
+    private Button setOnlineStatusButton; // NEU: Button für Anwesenheitsstatus
     private TextArea logArea;
     private TextArea controlsLogArea; // Separate log area for Controls tab
     private TextArea dmLogArea; // Separate log area for DM tab
@@ -55,6 +58,7 @@ public class DiscordBotFX extends Application {
     private TextField dmUserIdField;
     private TextField dmMessageField;
     private Button sendDmButton;
+    private Button sendDmEmbedButton; // NEU: Button für DM Embeds
     private TableView<MessageEntry> dmHistoryTable;
     private ObservableList<MessageEntry> dmHistory;
 
@@ -208,8 +212,11 @@ public class DiscordBotFX extends Application {
         // Message sending section
         VBox messageSection = createMessageSection();
 
-        // Status setting section
+        // Status setting section (ERWEITERT)
         VBox statusSection = createStatusSection();
+
+        // NEU: Anwesenheitsstatus section
+        VBox presenceSection = createPresenceSection();
 
         // Quick actions
         VBox quickActionsSection = createQuickActionsSection();
@@ -223,6 +230,8 @@ public class DiscordBotFX extends Application {
                 messageSection,
                 new Separator(),
                 statusSection,
+                new Separator(),
+                presenceSection, // NEU
                 new Separator(),
                 quickActionsSection,
                 new Separator(),
@@ -276,7 +285,7 @@ public class DiscordBotFX extends Application {
     private VBox createStatusSection() {
         VBox statusSection = new VBox(10);
 
-        Label sectionLabel = new Label("Bot Status");
+        Label sectionLabel = new Label("Bot Activity Status");
         sectionLabel.getStyleClass().add("section-label");
 
         HBox statusBox = new HBox(10);
@@ -287,7 +296,7 @@ public class DiscordBotFX extends Application {
         activityLabel.getStyleClass().add("subsection-label");
 
         activityTypeBox = new ComboBox<>();
-        activityTypeBox.getItems().addAll("Playing", "Listening", "Watching", "Competing");
+        activityTypeBox.getItems().addAll("Playing", "Listening", "Watching", "Competing", "Streaming");
         activityTypeBox.setValue("Playing");
         activityTypeBox.setPrefWidth(120);
 
@@ -296,7 +305,7 @@ public class DiscordBotFX extends Application {
         statusField.setPrefWidth(200);
         statusField.setOnAction(e -> setStatus());
 
-        setStatusButton = new Button("Set Status");
+        setStatusButton = new Button("Set Activity");
         setStatusButton.setPrefWidth(100);
         setStatusButton.getStyleClass().add("status-button");
         setStatusButton.setDisable(true);
@@ -306,6 +315,42 @@ public class DiscordBotFX extends Application {
         statusSection.getChildren().addAll(sectionLabel, statusBox);
 
         return statusSection;
+    }
+
+    // NEU: Presence/Anwesenheitsstatus Section
+    private VBox createPresenceSection() {
+        VBox presenceSection = new VBox(10);
+
+        Label sectionLabel = new Label("Bot Presence Status");
+        sectionLabel.getStyleClass().add("section-label");
+
+        HBox presenceBox = new HBox(10);
+        presenceBox.setAlignment(Pos.CENTER_LEFT);
+
+        Label presenceLabel = new Label("Anwesenheit:");
+        presenceLabel.setPrefWidth(100);
+        presenceLabel.getStyleClass().add("subsection-label");
+
+        onlineStatusBox = new ComboBox<>();
+        onlineStatusBox.getItems().addAll(
+                "Online",
+                "Unsichtbar",
+                "Abwesend",
+                "Bitte nicht Stören"
+        );
+        onlineStatusBox.setValue("Online");
+        onlineStatusBox.setPrefWidth(150);
+
+        setOnlineStatusButton = new Button("Set Presence");
+        setOnlineStatusButton.setPrefWidth(120);
+        setOnlineStatusButton.getStyleClass().add("status-button");
+        setOnlineStatusButton.setDisable(true);
+        setOnlineStatusButton.setOnAction(e -> setOnlineStatus());
+
+        presenceBox.getChildren().addAll(presenceLabel, onlineStatusBox, setOnlineStatusButton);
+        presenceSection.getChildren().addAll(sectionLabel, presenceBox);
+
+        return presenceSection;
     }
 
     private VBox createQuickActionsSection() {
@@ -388,7 +433,7 @@ public class DiscordBotFX extends Application {
         Label titleLabel = new Label("Direct Messages");
         titleLabel.getStyleClass().add("title-label");
 
-        // DM Sending Section
+        // DM Sending Section (ERWEITERT)
         VBox dmSendSection = createDmSendSection();
 
         // DM History Section
@@ -447,6 +492,18 @@ public class DiscordBotFX extends Application {
 
         dmMessageBox.getChildren().addAll(dmMessageLabel, dmMessageField, sendDmButton);
 
+        // NEU: DM Embed Button
+        HBox dmEmbedBox = new HBox(10);
+        dmEmbedBox.setAlignment(Pos.CENTER_LEFT);
+
+        sendDmEmbedButton = new Button("Send DM Embed");
+        sendDmEmbedButton.setPrefWidth(150);
+        sendDmEmbedButton.getStyleClass().add("status-button");
+        sendDmEmbedButton.setDisable(true);
+        sendDmEmbedButton.setOnAction(e -> openDmEmbedBuilder());
+
+        dmEmbedBox.getChildren().add(sendDmEmbedButton);
+
         // Quick DM Actions
         HBox quickDmActions = new HBox(10);
         quickDmActions.setAlignment(Pos.CENTER_LEFT);
@@ -461,7 +518,7 @@ public class DiscordBotFX extends Application {
 
         quickDmActions.getChildren().addAll(getDmChannelsButton, getUserInfoButton);
 
-        dmSendSection.getChildren().addAll(sectionLabel, userIdBox, dmMessageBox, quickDmActions);
+        dmSendSection.getChildren().addAll(sectionLabel, userIdBox, dmMessageBox, dmEmbedBox, quickDmActions);
         return dmSendSection;
     }
 
@@ -723,7 +780,9 @@ public class DiscordBotFX extends Application {
         disconnectButton.setDisable(false);
         sendMessageButton.setDisable(false);
         setStatusButton.setDisable(false);
+        setOnlineStatusButton.setDisable(false); // NEU
         sendDmButton.setDisable(false);
+        sendDmEmbedButton.setDisable(false); // NEU
     }
 
     private void onBotDisconnected() {
@@ -734,7 +793,9 @@ public class DiscordBotFX extends Application {
         disconnectButton.setDisable(true);
         sendMessageButton.setDisable(true);
         setStatusButton.setDisable(true);
+        setOnlineStatusButton.setDisable(true); // NEU
         sendDmButton.setDisable(true);
+        sendDmEmbedButton.setDisable(true); // NEU
     }
 
     private void sendMessage() {
@@ -819,12 +880,43 @@ public class DiscordBotFX extends Application {
             case "Competing":
                 activity = Activity.competing(status);
                 break;
+            case "Streaming":
+                activity = Activity.streaming(status, "https://twitch.tv/example");
+                break;
             default:
                 activity = Activity.playing(status);
         }
 
         jda.getPresence().setActivity(activity);
-        log("Status set to: " + activityType + " " + status);
+        log("Activity set to: " + activityType + " " + status);
+    }
+
+    // NEU: OnlineStatus setzen
+    private void setOnlineStatus() {
+        if (jda == null) return;
+
+        String statusText = onlineStatusBox.getValue();
+        OnlineStatus onlineStatus;
+
+        switch (statusText) {
+            case "Online":
+                onlineStatus = OnlineStatus.ONLINE;
+                break;
+            case "Unsichtbar":
+                onlineStatus = OnlineStatus.INVISIBLE;
+                break;
+            case "Abwesend":
+                onlineStatus = OnlineStatus.IDLE;
+                break;
+            case "Bitte nicht Stören":
+                onlineStatus = OnlineStatus.DO_NOT_DISTURB;
+                break;
+            default:
+                onlineStatus = OnlineStatus.ONLINE;
+        }
+
+        jda.getPresence().setStatus(onlineStatus);
+        log("Anwesenheitsstatus gesetzt auf: " + statusText);
     }
 
     private void showGuilds() {
@@ -912,53 +1004,17 @@ public class DiscordBotFX extends Application {
     }
 
     private void openEmbedBuilder() {
-        // Simple embed builder dialog
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Embed Builder");
-        dialog.setHeaderText("Create an Embed");
+        createEmbedBuilderWindow(false);
+    }
 
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        TextField titleField = new TextField();
-        titleField.setPromptText("Embed Title");
-        TextArea descArea = new TextArea();
-        descArea.setPromptText("Embed Description");
-        descArea.setPrefRowCount(3);
-        TextField colorField = new TextField("#0099ff");
-
-        grid.add(new Label("Title:"), 0, 0);
-        grid.add(titleField, 1, 0);
-        grid.add(new Label("Description:"), 0, 1);
-        grid.add(descArea, 1, 1);
-        grid.add(new Label("Color:"), 0, 2);
-        grid.add(colorField, 1, 2);
-
-        dialog.getDialogPane().setContent(grid);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        dialog.showAndWait().ifPresent(result -> {
-            if (result == ButtonType.OK && jda != null) {
-                String channelId = channelIdField.getText().trim();
-                if (!channelId.isEmpty()) {
-                    TextChannel channel = jda.getTextChannelById(channelId);
-                    if (channel != null) {
-                        var embed = new net.dv8tion.jda.api.EmbedBuilder()
-                                .setTitle(titleField.getText())
-                                .setDescription(descArea.getText())
-                                .setColor(java.awt.Color.decode(colorField.getText()))
-                                .build();
-
-                        channel.sendMessageEmbeds(embed).queue(
-                                success -> Platform.runLater(() -> log("Embed sent to #" + channel.getName())),
-                                error -> Platform.runLater(() -> log("Failed to send embed: " + error.getMessage()))
-                        );
-                    }
-                }
-            }
-        });
+    // NEU: DM Embed Builder
+    private void openDmEmbedBuilder() {
+        String userId = dmUserIdField.getText().trim();
+        if (userId.isEmpty()) {
+            showAlert("Error", "Please enter a User ID first!", Alert.AlertType.ERROR);
+            return;
+        }
+        createEmbedBuilderWindow(true);
     }
 
     private void exportDmHistory() {
@@ -1093,6 +1149,258 @@ public class DiscordBotFX extends Application {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // NEU: Discord-Style Embed Builder Window
+    private void createEmbedBuilderWindow(boolean isDm) {
+        Stage embedStage = new Stage();
+        embedStage.initOwner(primaryStage);
+        embedStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        embedStage.setTitle(isDm ? "DM Embed Builder" : "Channel Embed Builder");
+        embedStage.setWidth(500);
+        embedStage.setHeight(600);
+        embedStage.setResizable(false);
+
+        VBox root = new VBox(15);
+        root.setPadding(new Insets(20));
+        root.getStyleClass().add("root");
+
+        // Title
+        Label titleLabel = new Label(isDm ? "Create DM Embed" : "Create Channel Embed");
+        titleLabel.getStyleClass().add("title-label");
+
+        // Form Grid
+        GridPane grid = new GridPane();
+        grid.setHgap(15);
+        grid.setVgap(15);
+        grid.setPadding(new Insets(10));
+
+        // Embed Title
+        Label embedTitleLabel = new Label("Title:");
+        embedTitleLabel.getStyleClass().add("subsection-label");
+        TextField titleField = new TextField();
+        titleField.setPromptText("Enter embed title...");
+        titleField.setPrefWidth(300);
+
+        grid.add(embedTitleLabel, 0, 0);
+        grid.add(titleField, 1, 0);
+
+        // Description
+        Label descLabel = new Label("Description:");
+        descLabel.getStyleClass().add("subsection-label");
+        TextArea descArea = new TextArea();
+        descArea.setPromptText("Enter embed description...");
+        descArea.setPrefRowCount(4);
+        descArea.setPrefWidth(300);
+        descArea.setWrapText(true);
+
+        grid.add(descLabel, 0, 1);
+        grid.add(descArea, 1, 1);
+
+        // Color Picker
+        Label colorLabel = new Label("Color:");
+        colorLabel.getStyleClass().add("subsection-label");
+        ColorPicker colorPicker = new ColorPicker();
+        colorPicker.setValue(isDm ? javafx.scene.paint.Color.web("#5865f2") : javafx.scene.paint.Color.web("#0099ff"));
+        colorPicker.setPrefWidth(150);
+
+        grid.add(colorLabel, 0, 2);
+        grid.add(colorPicker, 1, 2);
+
+        // Author (nur für DM)
+        TextField authorField = null;
+        if (isDm) {
+            Label authorLabel = new Label("Author:");
+            authorLabel.getStyleClass().add("subsection-label");
+            authorField = new TextField();
+            authorField.setPromptText("Author name (optional)");
+            authorField.setPrefWidth(300);
+
+            grid.add(authorLabel, 0, 3);
+            grid.add(authorField, 1, 3);
+        }
+
+        // Footer
+        Label footerLabel = new Label("Footer:");
+        footerLabel.getStyleClass().add("subsection-label");
+        TextField footerField = new TextField();
+        footerField.setPromptText("Footer text (optional)");
+        footerField.setPrefWidth(300);
+
+        int footerRow = isDm ? 4 : 3;
+        grid.add(footerLabel, 0, footerRow);
+        grid.add(footerField, 1, footerRow);
+
+        // Image URL (nur für DM)
+        TextField imageField = null;
+        if (isDm) {
+            Label imageLabel = new Label("Image URL:");
+            imageLabel.getStyleClass().add("subsection-label");
+            imageField = new TextField();
+            imageField.setPromptText("Image URL (optional)");
+            imageField.setPrefWidth(300);
+
+            grid.add(imageLabel, 0, 5);
+            grid.add(imageField, 1, 5);
+        }
+
+        // Buttons
+        HBox buttonBox = new HBox(10);
+        buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.setPadding(new Insets(20, 0, 0, 0));
+
+        Button sendButton = new Button("Send Embed");
+        sendButton.setPrefWidth(120);
+        sendButton.getStyleClass().add("send-button");
+
+        Button cancelButton = new Button("Cancel");
+        cancelButton.setPrefWidth(120);
+        cancelButton.getStyleClass().add("button-secondary");
+
+        buttonBox.getChildren().addAll(sendButton, cancelButton);
+
+        // Event Handlers
+        final TextField finalAuthorField = authorField;
+        final TextField finalImageField = imageField;
+
+        sendButton.setOnAction(e -> {
+            if (jda == null) {
+                showAlert("Error", "Bot not connected!", Alert.AlertType.ERROR);
+                return;
+            }
+
+            String title = titleField.getText().trim();
+            String description = descArea.getText().trim();
+
+            if (title.isEmpty() && description.isEmpty()) {
+                showAlert("Error", "Please enter at least a title or description!", Alert.AlertType.ERROR);
+                return;
+            }
+
+            // Convert JavaFX Color to AWT Color
+            javafx.scene.paint.Color fxColor = colorPicker.getValue();
+            java.awt.Color awtColor = new java.awt.Color(
+                    (float) fxColor.getRed(),
+                    (float) fxColor.getGreen(),
+                    (float) fxColor.getBlue()
+            );
+
+            if (isDm) {
+                sendDmEmbed(title, description, awtColor,
+                        finalAuthorField != null ? finalAuthorField.getText().trim() : "",
+                        footerField.getText().trim(),
+                        finalImageField != null ? finalImageField.getText().trim() : "");
+            } else {
+                sendChannelEmbed(title, description, awtColor, footerField.getText().trim());
+            }
+
+            embedStage.close();
+        });
+
+        cancelButton.setOnAction(e -> embedStage.close());
+
+        // Layout
+        root.getChildren().addAll(titleLabel, new Separator(), grid, buttonBox);
+
+        Scene scene = new Scene(root);
+
+        // Apply Discord CSS
+        try {
+            scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
+        } catch (Exception ex) {
+            System.out.println("CSS file not found for embed builder");
+        }
+
+        embedStage.setScene(scene);
+        embedStage.showAndWait();
+    }
+
+    // Helper method for Channel Embeds
+    private void sendChannelEmbed(String title, String description, java.awt.Color color, String footer) {
+        String channelId = channelIdField.getText().trim();
+        if (channelId.isEmpty()) {
+            showAlert("Error", "Please enter a Channel ID first!", Alert.AlertType.ERROR);
+            return;
+        }
+
+        try {
+            TextChannel channel = jda.getTextChannelById(channelId);
+            if (channel != null) {
+                var embedBuilder = new net.dv8tion.jda.api.EmbedBuilder()
+                        .setColor(color);
+
+                if (!title.isEmpty()) {
+                    embedBuilder.setTitle(title);
+                }
+                if (!description.isEmpty()) {
+                    embedBuilder.setDescription(description);
+                }
+                if (!footer.isEmpty()) {
+                    embedBuilder.setFooter(footer);
+                }
+
+                var embed = embedBuilder.build();
+
+                channel.sendMessageEmbeds(embed).queue(
+                        success -> Platform.runLater(() -> {
+                            log("Embed sent to #" + channel.getName() + ": " + title);
+                            messagesSent++;
+                        }),
+                        error -> Platform.runLater(() -> log("Failed to send embed: " + error.getMessage()))
+                );
+            } else {
+                log("Channel not found: " + channelId);
+            }
+        } catch (Exception e) {
+            log("Error sending channel embed: " + e.getMessage());
+        }
+    }
+
+    // Helper method for DM Embeds
+    private void sendDmEmbed(String title, String description, java.awt.Color color, String author, String footer, String imageUrl) {
+        String userId = dmUserIdField.getText().trim();
+        if (userId.isEmpty()) {
+            showAlert("Error", "Please enter a User ID first!", Alert.AlertType.ERROR);
+            return;
+        }
+
+        try {
+            jda.retrieveUserById(userId).queue(user -> {
+                user.openPrivateChannel().queue(privateChannel -> {
+                    var embedBuilder = new net.dv8tion.jda.api.EmbedBuilder()
+                            .setColor(color);
+
+                    if (!title.isEmpty()) {
+                        embedBuilder.setTitle(title);
+                    }
+                    if (!description.isEmpty()) {
+                        embedBuilder.setDescription(description);
+                    }
+                    if (!author.isEmpty()) {
+                        embedBuilder.setAuthor(author);
+                    }
+                    if (!footer.isEmpty()) {
+                        embedBuilder.setFooter(footer);
+                    }
+                    if (!imageUrl.isEmpty()) {
+                        embedBuilder.setImage(imageUrl);
+                    }
+
+                    var embed = embedBuilder.build();
+
+                    privateChannel.sendMessageEmbeds(embed).queue(
+                            success -> Platform.runLater(() -> {
+                                logDm("DM Embed sent to " + user.getName() + "#" + user.getDiscriminator() + ": " + title);
+                                addDmToHistory(user.getName(), "Sent", "[EMBED] " + title);
+                                messagesSent++;
+                            }),
+                            error -> Platform.runLater(() -> logDm("Failed to send DM embed to " + user.getName() + ": " + error.getMessage()))
+                    );
+                }, error -> Platform.runLater(() -> logDm("Failed to open DM channel with user " + userId + ": " + error.getMessage())));
+            }, error -> Platform.runLater(() -> logDm("Failed to retrieve user " + userId + ": " + error.getMessage())));
+        } catch (Exception e) {
+            logDm("Error sending DM embed: " + e.getMessage());
+        }
     }
 
     public static void main(String[] args) {
