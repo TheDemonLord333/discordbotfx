@@ -1,4 +1,4 @@
-src/main/java/com/discord/bot/
+src/main/resources/com/discord/bot/
 
 target/
 !.mvn/wrapper/maven-wrapper.jar
