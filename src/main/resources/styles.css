@@ -594,3 +594,7 @@
 .color-picker .arrow-button .arrow {
     -fx-background-color: #dcddde;
 }
+
+.textfield {
+    -fx-background-color: #40444B;
+}

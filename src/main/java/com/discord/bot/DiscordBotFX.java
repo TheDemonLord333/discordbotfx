@@ -35,7 +35,7 @@ public class DiscordBotFX extends Application {
     private Stage primaryStage;
 
     // UI Components
-    private PasswordField tokenField;
+    private TextField tokenField;
     private TextField messageField;
     private TextField channelIdField;
     private TextField statusField;
@@ -150,7 +150,7 @@ public class DiscordBotFX extends Application {
         Label tokenLabel = new Label("Bot Token:");
         tokenLabel.setPrefWidth(100);
         tokenLabel.getStyleClass().add("subsection-label");
-        tokenField = new PasswordField();
+        tokenField = new TextField();
         tokenField.setPrefWidth(300);
         tokenField.setPromptText("Enter your Discord bot token here...");
 
