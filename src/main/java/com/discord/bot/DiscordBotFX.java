@@ -150,7 +150,7 @@ public class DiscordBotFX extends Application {
         Label tokenLabel = new Label("Bot Token:");
         tokenLabel.setPrefWidth(100);
         tokenLabel.getStyleClass().add("subsection-label");
-        tokenField = new TextField();
+        tokenField = new PasswordField();
         tokenField.setPrefWidth(300);
         tokenField.setPromptText("Enter your Discord bot token here...");
 
