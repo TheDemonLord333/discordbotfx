@@ -35,7 +35,7 @@ public class DiscordBotFX extends Application {
     private Stage primaryStage;
 
     // UI Components
-    private TextField tokenField;
+    private PasswordField tokenField;
     private TextField messageField;
     private TextField channelIdField;
     private TextField statusField;
